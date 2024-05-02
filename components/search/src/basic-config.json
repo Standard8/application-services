@@ -1,0 +1,71 @@
+{
+  "data": [
+    {
+      "recordType": "engine",
+      "identifier": "engine-1",
+      "base": {
+        "name": "engine",
+        "classification": "unknown",
+        "urls": {
+          "search": {
+            "base": "https://example.com",
+            "params": [
+              {
+                "name": "partner-code",
+                "value": "code"
+              }
+            ],
+            "searchTermParamName": "q"
+          }
+        }
+      },
+      "variants": [
+        {
+          "environment": { "regions": ["CA", "GB", "IT"] },
+          "urls": {
+            "search": {
+              "params": []
+            }
+          }
+        },
+        {
+          "environment": { "regions": ["CA", "US"] },
+          "urls": {
+            "search": {
+              "params": [
+                {
+                  "name": "partner-code",
+                  "value": "bar"
+                }
+              ]
+            }
+          },
+          "telemetrySuffix": "telemetry"
+        },
+        {
+          "environment": { "regions": ["CA", "GB"] },
+          "urls": {
+            "search": {
+              "params": [
+                {
+                  "name": "partner-code",
+                  "value": "foo"
+                }
+              ]
+            }
+          },
+          "searchTermParamName": "search-param"
+        }
+      ]
+    },
+    {
+      "recordType": "defaultEngines",
+      "globalDefault": "",
+      "specificDefaults": []
+    },
+    {
+      "recordType": "engineOrders",
+      "orders": []
+    }
+  ]
+}

@@ -3827,6 +3827,10 @@ dependencies = [
 name = "search"
 version = "0.1.0"
 dependencies = [
+ "error-support",
+ "serde",
+ "serde_json",
+ "thiserror",
  "uniffi",
 ]
 

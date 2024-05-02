@@ -4,7 +4,64 @@
  */
 
 namespace search {
+    [Throws=SearchApiError]
+    FilteredSearchEngines filter_engine_configuration(
+        SearchUserEnvironment user_environment,
+        string configuration
+    );
 
-u32 add(u32 a, u32 b);
+};
 
+[Error]
+interface SearchApiError {
+    Other(string reason);
+};
+
+dictionary SearchUrlParam {
+    string name;
+    string? value;
+    string? experiment_config;
+};
+
+dictionary SearchEngineUrl {
+    string? base;
+    string? method;
+    sequence<SearchUrlParam>? params;
+    string? search_term_param_name;
+};
+
+dictionary SearchEngineUrls {
+    SearchEngineUrl search;
+    SearchEngineUrl? suggestion;
+    SearchEngineUrl? trending;
+};
+
+dictionary SearchEngineDefinition {
+    sequence<string>? aliases;
+    string classification;
+    string identifier;
+    /// The display name of the search engine.
+    string name;
+    string? partner_code;
+    string? telemetry_suffix;
+    SearchEngineUrls urls;
+};
+
+dictionary FilteredSearchEngines {
+    /// A list of engines, with the default engine first, and the rest in the
+    /// order defined by the configuration.
+    sequence<SearchEngineDefinition> engines;
+    /// The identifier of the private default engine, if it is different to the
+    /// default engine.
+    string? private_default_engine_id;
+};
+
+dictionary SearchUserEnvironment {
+    string locale;
+    string region;
+    string channel;
+    string distribution_id;
+    string experiment;
+    string app_name;
+    string version;
 };
