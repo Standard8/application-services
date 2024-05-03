@@ -9,8 +9,22 @@ use serde::Deserialize;
 pub struct SearchEngineEnvironment {
     #[serde(rename = "allRegionsAndLocales")]
     pub all_regions_and_locales: Option<bool>,
+    pub distributions: Option<Vec<String>>,
+    #[serde(rename = "excludedLocales")]
+    pub excluded_locales: Option<Vec<String>>,
+    #[serde(rename = "excludedRegions")]
+    pub excluded_regions: Option<Vec<String>>,
     pub locales: Option<Vec<String>>,
     pub regions: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Clone)]
+pub struct SearchAccessPointValues {
+    pub addressbar: Option<String>,
+    pub contextmenu: Option<String>,
+    pub homepage: Option<String>,
+    pub newtab: Option<String>,
+    pub searchbar: Option<String>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Clone)]
@@ -19,6 +33,8 @@ pub struct SearchUrlParam {
     pub value: Option<String>,
     #[serde(rename = "experimentConfig")]
     pub experiment_config: Option<String>,
+    #[serde(rename = "searchAccessPoint")]
+    pub search_access_point: Option<SearchAccessPointValues>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Clone)]
@@ -33,7 +49,7 @@ pub struct SearchEngineUrl {
 #[derive(Debug, Deserialize, PartialEq, Clone)]
 pub struct SearchEngineUrls {
     pub search: SearchEngineUrl,
-    pub suggestion: Option<SearchEngineUrl>,
+    pub suggestions: Option<SearchEngineUrl>,
     pub trending: Option<SearchEngineUrl>,
 }
 
