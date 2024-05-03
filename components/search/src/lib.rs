@@ -9,8 +9,8 @@ mod schema_types;
 pub use error::SearchApiError;
 
 pub(crate) use schema_types::{
-    SearchConfiguration, SearchEngineEnvironment, SearchEngineRecord, SearchEngineVariant,
-    SearchRecords,
+    SearchAccessPointValues, SearchConfiguration, SearchEngineEnvironment, SearchEngineRecord,
+    SearchEngineVariant, SearchRecords,
 };
 pub use schema_types::{SearchEngineUrl, SearchEngineUrls, SearchUrlParam};
 

@@ -6,7 +6,6 @@
 use crate::{
     error::Error, SearchApiResult, SearchConfiguration, SearchEngineEnvironment,
     SearchEngineRecord, SearchEngineUrl, SearchEngineUrls, SearchEngineVariant, SearchRecords,
-    SearchUrlParam,
 };
 use error_support::handle_error;
 
@@ -51,7 +50,6 @@ pub fn filter_engine_configuration(
     user_environment: SearchUserEnvironment,
     configuration: String,
 ) -> SearchApiResult<FilteredSearchEngines> {
-    println!("{configuration}");
     let configuration: SearchConfiguration = serde_json::from_str(&configuration)?;
     let configuration = &configuration.data;
 
@@ -89,7 +87,7 @@ fn extract_engine_config(
             let base = &record.base;
 
             let mut engine_definition = SearchEngineDefinition {
-                aliases: None,
+                aliases: base.aliases.clone(),
                 classification: base.classification.clone(),
                 identifier: record.identifier.clone(),
                 name: base.name.clone(),
@@ -113,28 +111,52 @@ fn copy_variant_into(
     // TODO: Add more fields.
     match &variant.urls {
         Some(urls) => {
-            copy_url_into(&urls.search, &mut engine_definition.urls.search);
+            engine_definition.urls.search = merge_url(
+                &Some(urls.search.clone()),
+                &Some(engine_definition.urls.search.clone()),
+            )
+            .unwrap();
+            engine_definition.urls.suggestions =
+                merge_url(&urls.suggestions, &engine_definition.urls.suggestions);
+            engine_definition.urls.trending =
+                merge_url(&urls.trending, &engine_definition.urls.trending);
         }
         None => (),
     }
 }
 
-fn copy_url_into(url: &SearchEngineUrl, engine_url: &mut SearchEngineUrl) {
-    match &url.base {
-        Some(base) => engine_url.base = Some(base.clone()),
-        None => (),
-    }
-    match &url.method {
-        Some(method) => engine_url.method = Some(method.clone()),
-        None => (),
-    }
-    match &url.params {
-        Some(params) => engine_url.params = Some(params.clone()),
-        None => (),
-    }
-    match &url.search_term_param_name {
-        Some(param_name) => engine_url.search_term_param_name = Some(param_name.clone()),
-        None => (),
+fn merge_url(
+    url: &Option<SearchEngineUrl>,
+    engine_url: &Option<SearchEngineUrl>,
+) -> Option<SearchEngineUrl> {
+    match engine_url {
+        None => match url {
+            Some(url) => return Some(url.clone()),
+            None => None,
+        },
+        Some(engine_url) => match &url {
+            Some(url) => {
+                let mut new_url = engine_url.clone();
+                match &url.base {
+                    Some(base) => new_url.base = Some(base.clone()),
+                    None => (),
+                }
+                match &url.method {
+                    Some(method) => new_url.method = Some(method.clone()),
+                    None => (),
+                }
+                match &url.params {
+                    Some(params) => new_url.params = Some(params.clone()),
+                    None => (),
+                }
+                match &url.search_term_param_name {
+                    Some(param_name) => new_url.search_term_param_name = Some(param_name.clone()),
+                    None => (),
+                }
+                Some(new_url)
+            }
+            None => None,
+        },
     }
 }
 
@@ -147,7 +169,7 @@ fn matches_user_environment(
         &user_environment.region,
         &user_environment.locale,
         &variant.environment,
-    )
+    ) && matches_distribution(&user_environment.distribution_id, &variant.environment)
 }
 
 fn matches_region_and_locale(
@@ -155,7 +177,11 @@ fn matches_region_and_locale(
     user_locale: &String,
     config_env: &SearchEngineEnvironment,
 ) -> bool {
-    // TODO: Excluded regions.
+    if does_config_include(&config_env.excluded_locales, user_locale)
+        || does_config_include(&config_env.excluded_regions, user_region)
+    {
+        return false;
+    }
 
     if config_env
         .all_regions_and_locales
@@ -190,9 +216,21 @@ fn matches_region_and_locale(
     false
 }
 
+fn matches_distribution(user_distribution: &String, config_env: &SearchEngineEnvironment) -> bool {
+    match &config_env.distributions {
+        Some(distributions) => {
+            distributions.len() == 0 || distributions.iter().any(|dist| dist == user_distribution)
+        }
+        // If there's no distribution for this engineConfig, ignore the check.
+        None => true,
+    }
+}
+
 fn does_config_include(config_array: &Option<Vec<String>>, compare_item: &String) -> bool {
     match config_array {
-        Some(array) => array.iter().any(|item| item == compare_item),
+        Some(array) => array
+            .iter()
+            .any(|item| item.eq_ignore_ascii_case(compare_item)),
         None => false,
     }
 }
@@ -200,6 +238,7 @@ fn does_config_include(config_array: &Option<Vec<String>>, compare_item: &String
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::SearchUrlParam;
 
     const BASIC_CONFIG: &str = include_str!("./basic-config.json");
 
@@ -260,10 +299,11 @@ mod tests {
                                 name: String::from("partner-code"),
                                 value: Some(String::from("foo")),
                                 experiment_config: None,
+                                search_access_point: None
                             }]),
                             search_term_param_name: Some(String::from("q")),
                         },
-                        suggestion: None,
+                        suggestions: None,
                         trending: None,
                     },
                 }],

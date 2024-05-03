@@ -17,10 +17,19 @@ interface SearchApiError {
     Other(string reason);
 };
 
+dictionary SearchAccessPointValues {
+    string? addressbar;
+    string? contextmenu;
+    string? homepage;
+    string? newtab;
+    string? searchbar;
+};
+
 dictionary SearchUrlParam {
     string name;
     string? value;
     string? experiment_config;
+    SearchAccessPointValues? search_access_point;
 };
 
 dictionary SearchEngineUrl {
@@ -32,7 +41,7 @@ dictionary SearchEngineUrl {
 
 dictionary SearchEngineUrls {
     SearchEngineUrl search;
-    SearchEngineUrl? suggestion;
+    SearchEngineUrl? suggestions;
     SearchEngineUrl? trending;
 };
 
