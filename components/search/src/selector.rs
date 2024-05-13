@@ -35,6 +35,7 @@ pub struct FilteredSearchEngines {
 /// - `experiment`: Any associated experiment id.
 /// - `app_name`: The name of the application.
 /// - `version`: The version of the application.#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SearchUserEnvironment {
     pub locale: String,
     pub region: String,
