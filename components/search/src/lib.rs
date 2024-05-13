@@ -14,8 +14,8 @@ pub(crate) use schema_types::{
 };
 pub use schema_types::{SearchEngineUrl, SearchEngineUrls, SearchUrlParam};
 
-pub mod selector;
-pub use selector::{
+pub mod filter;
+pub use filter::{
     filter_engine_configuration, FilteredSearchEngines, SearchEngineDefinition,
     SearchUserEnvironment,
 };
