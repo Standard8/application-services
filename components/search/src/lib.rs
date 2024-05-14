@@ -20,7 +20,10 @@ pub use filter::{
     SearchUserEnvironment,
 };
 
-// pub(crate) type Result<T> = std::result::Result<T, error::Error>;
+pub mod selector;
+pub use selector::SearchSelector;
+
+pub(crate) type Result<T> = std::result::Result<T, error::Error>;
 pub type SearchApiResult<T> = std::result::Result<T, error::SearchApiError>;
 
 uniffi::include_scaffolding!("search");
