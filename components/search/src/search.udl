@@ -74,3 +74,16 @@ dictionary SearchUserEnvironment {
     string app_name;
     string version;
 };
+
+interface SearchSelector {
+    constructor();
+
+    /// TODO:  How to handle error AND ByArc?
+    [Throws=SearchApiError, Self=ByArc]
+    void set_search_config(string configuration);
+
+    [Throws=SearchApiError]
+    FilteredSearchEngines filter_engine_configuration(
+        SearchUserEnvironment user_environment
+    );
+};

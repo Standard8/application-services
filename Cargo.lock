@@ -3807,6 +3807,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "error-support",
+ "parking_lot",
  "serde",
  "serde_json",
  "thiserror",

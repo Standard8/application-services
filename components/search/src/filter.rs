@@ -4,7 +4,7 @@
  */
 
 use crate::{
-    error::Error, SearchApiResult, SearchConfiguration, SearchEngineEnvironment,
+    error::Error, Result, SearchApiResult, SearchConfiguration, SearchEngineEnvironment,
     SearchEngineRecord, SearchEngineUrl, SearchEngineUrls, SearchEngineVariant, SearchRecords,
 };
 use error_support::handle_error;
@@ -54,9 +54,16 @@ pub fn filter_engine_configuration(
     let configuration: SearchConfiguration = serde_json::from_str(&configuration)?;
     let configuration = &configuration.data;
 
+    internal_filter_engine_configuration(user_environment, configuration)
+}
+
+pub(crate) fn internal_filter_engine_configuration(
+    user_environment: SearchUserEnvironment,
+    search_records: &Vec<SearchRecords>,
+) -> Result<FilteredSearchEngines> {
     let mut engines = Vec::new();
 
-    for record in configuration {
+    for record in search_records {
         match record {
             SearchRecords::Engine(engine) => {
                 let result = extract_engine_config(&user_environment, &engine);

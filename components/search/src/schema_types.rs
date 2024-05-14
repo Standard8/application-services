@@ -107,7 +107,7 @@ pub(crate) enum SearchRecords {
     EngineOrders(SearchEngineOrders),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub(crate) struct SearchConfiguration {
     pub data: Vec<SearchRecords>,
 }
