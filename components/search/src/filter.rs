@@ -8,12 +8,12 @@ use crate::configuration_overrides_types::JSONOverridesRecord;
 use crate::environment_matching::matches_user_environment;
 use crate::{
     error::Error, JSONDefaultEnginesRecord, JSONEngineBase, JSONEngineMethod, JSONEngineRecord,
-    JSONEngineRecordV3, JSONEngineUrl, JSONEngineUrls, JSONEngineVariant,
+    JSONEngineRecordV3, JSONEngineUrl, JSONEngineUrls, JSONEngineVariant, JSONEngineVariantV3,
     JSONSearchConfigurationRecords, JSONSearchConfigurationRecordsV3, RefinedSearchConfig,
     RefinedSearchConfigV3, SearchEngineDefinition, SearchEngineDefinitionV3, SearchEngineUrl,
     SearchEngineUrls, SearchUserEnvironment,
 };
-use crate::{sort_helpers, JSONAvailableLocalesRecord, JSONEngineBaseV3, JSONEngineOrdersRecord};
+use crate::{JSONAvailableLocalesRecord, JSONEngineBaseV3, JSONEngineOrdersRecord, JSONVariantEnvironment, sort_helpers};
 use remote_settings::RemoteSettingsRecord;
 use std::collections::HashSet;
 
@@ -203,25 +203,52 @@ impl SearchEngineDefinition {
 }
 
 impl SearchEngineDefinitionV3 {
+    fn merge_variant(
+        &mut self,
+        user_environment: &SearchUserEnvironment,
+        variant: &JSONEngineVariantV3,
+    ) {
+        if !self.optional {
+            self.optional = variant.optional;
+        }
+        if let Some(partner) = &variant.partner {
+            self.partner = Some(partner.clone());
+        }
+        if let Some(urls) = &variant.urls {
+            self.urls.merge(user_environment, urls);
+        }
+        if let Some(is_new_until) = &variant.is_new_until {
+            self.is_new_until = Some(is_new_until.clone());
+        }
+    }
+
     pub(crate) fn from_configuration_details(
         user_environment: &SearchUserEnvironment,
         identifier: &str,
         base: JSONEngineBaseV3,
-        variant: &JSONEngineVariant,
-        sub_variant: &Option<JSONEngineVariant>,
+        variant: &JSONEngineVariantV3,
+        sub_variant: &Option<JSONEngineVariantV3>,
     ) -> SearchEngineDefinitionV3 {
-        // v3 engines are currently built identically to v2 engines, so this
-        // delegates to the v2 builder. As search-config-v3 diverges from v2,
-        // we'll need to replace the delegation piecewise (e.g. set v3-only
-        // fields on the result, or fork the builder entirely).
-        SearchEngineDefinition::from_configuration_details(
-            user_environment,
-            identifier,
-            base.into(),
-            variant,
-            sub_variant,
-        )
-        .into()
+        let mut engine_definition = SearchEngineDefinitionV3 {
+            aliases: base.aliases.unwrap_or_default(),
+            charset: base.charset.unwrap_or_else(|| "UTF-8".to_string()),
+            classification: base.classification,
+            identifier: identifier.to_string(),
+            name: base.name,
+            optional: variant.optional,
+            order_hint: None,
+            partner: base.partner,
+            urls: SearchEngineUrls::default(),
+            is_new_until: None,
+        };
+
+        engine_definition.urls.merge(user_environment, &base.urls);
+        engine_definition.merge_variant(user_environment, variant);
+        if let Some(sub_variant) = sub_variant {
+            engine_definition.merge_variant(user_environment, sub_variant);
+        }
+
+        engine_definition
     }
 }
 
@@ -528,21 +555,45 @@ pub(crate) fn filter_engine_configuration_v3_impl(
     })
 }
 
-fn find_matching_variant(
-    variants: Vec<JSONEngineVariant>,
+trait EngineVariant: Clone {
+    fn environment(&self) -> &JSONVariantEnvironment;
+    fn sub_variants(&self) -> Vec<Self>;
+}
+
+impl EngineVariant for JSONEngineVariant {
+    fn environment(&self) -> &JSONVariantEnvironment {
+        &self.environment
+    }
+    fn sub_variants(&self) -> Vec<Self> {
+        self.sub_variants.clone()
+    }
+}
+
+impl EngineVariant for JSONEngineVariantV3 {
+    fn environment(&self) -> &JSONVariantEnvironment {
+        &self.environment
+    }
+    fn sub_variants(&self) -> Vec<Self> {
+        self.sub_variants.clone()
+    }
+}
+
+
+fn find_matching_variant<V: EngineVariant>(
+    variants: Vec<V>,
     user_environment: &SearchUserEnvironment,
-) -> Option<(JSONEngineVariant, Option<JSONEngineVariant>)> {
+) -> Option<(V, Option<V>)> {
     let matching_variant = variants
         .into_iter()
         .rev()
-        .find(|r| matches_user_environment(&r.environment, user_environment))?;
+        .find(|r| matches_user_environment(r.environment(), user_environment))?;
 
     let matching_sub_variant = matching_variant
-        .sub_variants
-        .iter()
+        .sub_variants()
+        .into_iter()
         .rev()
-        .find(|r| matches_user_environment(&r.environment, user_environment))
-        .cloned();
+        .find(|r| matches_user_environment(r.environment(), user_environment))
+        ;
 
     Some((matching_variant, matching_sub_variant))
 }
@@ -556,7 +607,7 @@ fn maybe_extract_engine_config(
         base,
         variants,
     } = *record;
-    find_matching_variant(variants, user_environment).map(|(variant, sub_variant)| {
+    (find_matching_variant(variants, user_environment)).map(|(variant, sub_variant)| {
         SearchEngineDefinition::from_configuration_details(
             user_environment,
             &identifier,

@@ -1,9 +1,10 @@
 use crate::{
     JSONEngineBase, JSONEngineMethod, JSONEngineUrl, JSONEngineUrls, JSONEngineVariant,
     JSONVariantEnvironment, SearchEngineClassification, SearchEngineDefinition, SearchEngineUrl,
-    SearchEngineUrls, SearchUrlParam,
+    SearchEngineUrls, SearchUrlParam, SearchEngineDefinitionV3, SearchEnginePartnerDetails
 };
 use serde_json::{json, Value};
+use std::collections::HashMap;
 
 #[cfg(test)]
 pub struct EngineRecord {
@@ -120,6 +121,168 @@ impl EngineRecord {
                 "name": self.name,
                 "classification": self.classification,
                 "partnerCode": self.partner_code,
+                "urls": self.urls,
+            },
+            "variants": self.variants,
+        });
+
+        if let Some(id) = self.id {
+            record["id"] = json!(id);
+        }
+        if let Some(schema) = self.schema {
+            record["schema"] = json!(schema);
+        }
+        if let Some(last_modified) = self.last_modified {
+            record["last_modified"] = json!(last_modified);
+        }
+        record
+    }
+
+    pub fn add_variant(mut self, vb: Variant) -> Self {
+        self.variants.push(vb.build());
+        self
+    }
+
+    pub fn override_variants(mut self, vb: Variant) -> Self {
+        self.variants = vec![vb.build()];
+        self
+    }
+
+    // Remote Settings metadata
+    pub fn id(mut self, id: &str) -> Self {
+        self.id = Some(id.to_string());
+        self
+    }
+
+    pub fn schema(mut self, schema: i64) -> Self {
+        self.schema = Some(schema);
+        self
+    }
+
+    pub fn last_modified(mut self, last_modified: i64) -> Self {
+        self.last_modified = Some(last_modified);
+        self
+    }
+}
+
+#[cfg(test)]
+pub struct EngineRecordV3 {
+    record_type: String,
+    identifier: String,
+    name: String,
+    classification: String,
+    urls: Value,
+    variants: Vec<Value>,
+    partner: Option<HashMap<String, SearchEnginePartnerDetails>>,
+
+    // Remote Settings metadata
+    id: Option<String>,
+    schema: Option<i64>,
+    last_modified: Option<i64>,
+}
+
+#[cfg(test)]
+impl EngineRecordV3 {
+    pub fn full(identifier: &str, name: &str) -> Self {
+        Self {
+            record_type: "engine".to_string(),
+            identifier: identifier.to_string(),
+            name: name.to_string(),
+            classification: "general".to_string(),
+            partner: Some(HashMap::from([("default".to_string(), SearchEnginePartnerDetails {
+                partner_code: Some("partner_code".to_string()),
+                telemetry_suffix: Some("telemetry_suffix".to_string())
+            })])),
+            urls: json!({
+                "search": {
+                    "base": "https://example.com",
+                    "method": "GET",
+                    "params": [{
+                        "name": "search-name",
+                        "enterpriseValue": "enterprise-value",
+                    }],
+                    "searchTermParamName": "q",
+                },
+                "suggestions": {
+                    "base": "https://example.com/suggestions",
+                    "method": "POST",
+                    "params": [{
+                        "name": "suggestion-name",
+                        "value": "suggestion-value",
+                    }],
+                    "searchTermParamName": "suggest",
+                },
+                "trending": {
+                    "base": "https://example.com/trending",
+                    "method": "GET",
+                    "params": [{
+                        "name": "trending-name",
+                        "experimentConfig": "trending-experiment-value",
+                    }],
+                },
+                "searchForm": {
+                    "base": "https://example.com/search-form",
+                    "method": "GET",
+                    "params": [{
+                        "name": "search-form-name",
+                        "value": "search-form-value",
+                    }],
+                },
+                "visualSearch": {
+                    "base": "https://example.com/visual-search",
+                    "method": "GET",
+                    "params": [{
+                        "name": "visual-search-name",
+                        "value": "visual-search-value",
+                    }],
+                    "searchTermParamName": "url",
+                },
+            }),
+            variants: vec![json!({
+                "environment": {
+                    "allRegionsAndLocales": true,
+                }
+            })],
+            // Remote Settings metadata
+            id: None,
+            schema: None,
+            last_modified: None,
+        }
+    }
+    pub fn minimal(identifier: &str, name: &str) -> Self {
+        Self {
+            record_type: "engine".to_string(),
+            identifier: identifier.to_string(),
+            name: name.to_string(),
+            classification: "general".to_string(),
+            partner: None,
+            urls: json!({
+                "search": {
+                    "base": "https://example.com",
+                    "method": "GET",
+                    "searchTermParamName": "search",
+                },
+            }),
+            variants: vec![json!({
+                "environment": {
+                    "allRegionsAndLocales": true,
+                }
+            })],
+            // Remote Settings metadata
+            id: None,
+            schema: None,
+            last_modified: None,
+        }
+    }
+
+    pub fn build(self) -> Value {
+        let mut record = json!({
+            "recordType": self.record_type,
+            "identifier": self.identifier,
+            "base": {
+                "name": self.name,
+                "classification": self.classification,
+                "partner": self.partner,
                 "urls": self.urls,
             },
             "variants": self.variants,
@@ -503,11 +666,197 @@ impl ExpectedEngine {
 }
 
 #[cfg(test)]
+pub struct ExpectedEngineV3 {
+    engine: SearchEngineDefinitionV3,
+}
+
+#[cfg(test)]
+impl ExpectedEngineV3 {
+    pub fn full(identifier: &str, name: &str) -> Self {
+        Self {
+            engine: Self::expected_full_engine(identifier, name),
+        }
+    }
+
+    pub fn minimal(identifier: &str, name: &str) -> Self {
+        Self {
+            engine: Self::expected_minimal_engine(identifier, name),
+        }
+    }
+
+    pub fn partner(self, partner: HashMap<String, SearchEnginePartnerDetails>) -> Self {
+        Self {
+            engine: SearchEngineDefinitionV3 {
+                partner: Some(partner),
+                ..self.engine
+            },
+        }
+    }
+
+    pub fn optional(self, value: bool) -> Self {
+        Self {
+            engine: SearchEngineDefinitionV3 {
+                optional: value,
+                ..self.engine
+            },
+        }
+    }
+
+    pub fn search_method(self, method: &str) -> Self {
+        Self {
+            engine: SearchEngineDefinitionV3 {
+                urls: SearchEngineUrls {
+                    search: SearchEngineUrl {
+                        method: method.to_string(),
+                        ..self.engine.urls.search
+                    },
+                    ..self.engine.urls
+                },
+                ..self.engine
+            },
+        }
+    }
+
+    pub fn search_base(self, base: &str) -> Self {
+        Self {
+            engine: SearchEngineDefinitionV3 {
+                urls: SearchEngineUrls {
+                    search: SearchEngineUrl {
+                        base: base.to_string(),
+                        ..self.engine.urls.search
+                    },
+                    ..self.engine.urls
+                },
+                ..self.engine
+            },
+        }
+    }
+
+    pub fn search_params(self, params: Vec<SearchUrlParam>) -> Self {
+        Self {
+            engine: SearchEngineDefinitionV3 {
+                urls: SearchEngineUrls {
+                    search: SearchEngineUrl {
+                        params,
+                        ..self.engine.urls.search
+                    },
+                    ..self.engine.urls
+                },
+                ..self.engine
+            },
+        }
+    }
+
+    pub fn build(self) -> SearchEngineDefinitionV3 {
+        self.engine
+    }
+
+    fn expected_full_engine(identifier: &str, name: &str) -> SearchEngineDefinitionV3 {
+        SearchEngineDefinitionV3 {
+            charset: "UTF-8".to_string(),
+            classification: SearchEngineClassification::General,
+            identifier: identifier.to_string(),
+            name: name.to_string(),
+            optional: false,
+            order_hint: None,
+            partner: Some(HashMap::from([("default".to_string(), SearchEnginePartnerDetails {
+                partner_code: Some("partner_code".to_string()),
+                telemetry_suffix: Some("telemetry_suffix".to_string())
+            })])),
+            urls: SearchEngineUrls {
+                search: SearchEngineUrl {
+                    base: "https://example.com".to_string(),
+                    method: "GET".to_string(),
+                    params: vec![SearchUrlParam {
+                        name: "search-name".to_string(),
+                        value: None,
+                        enterprise_value: Some("enterprise-value".to_string()),
+                        experiment_config: None,
+                    }],
+                    search_term_param_name: Some("q".to_string()),
+                    ..Default::default()
+                },
+                suggestions: Some(SearchEngineUrl {
+                    base: "https://example.com/suggestions".to_string(),
+                    method: "POST".to_string(),
+                    params: vec![SearchUrlParam {
+                        name: "suggestion-name".to_string(),
+                        value: Some("suggestion-value".to_string()),
+                        enterprise_value: None,
+                        experiment_config: None,
+                    }],
+                    search_term_param_name: Some("suggest".to_string()),
+                    ..Default::default()
+                }),
+                trending: Some(SearchEngineUrl {
+                    base: "https://example.com/trending".to_string(),
+                    method: "GET".to_string(),
+                    params: vec![SearchUrlParam {
+                        name: "trending-name".to_string(),
+                        value: None,
+                        enterprise_value: None,
+                        experiment_config: Some("trending-experiment-value".to_string()),
+                    }],
+                    ..Default::default()
+                }),
+                search_form: Some(SearchEngineUrl {
+                    base: "https://example.com/search-form".to_string(),
+                    method: "GET".to_string(),
+                    params: vec![SearchUrlParam {
+                        name: "search-form-name".to_string(),
+                        value: Some("search-form-value".to_string()),
+                        experiment_config: None,
+                        enterprise_value: None,
+                    }],
+                    ..Default::default()
+                }),
+                visual_search: Some(SearchEngineUrl {
+                    base: "https://example.com/visual-search".to_string(),
+                    method: "GET".to_string(),
+                    params: vec![SearchUrlParam {
+                        name: "visual-search-name".to_string(),
+                        value: Some("visual-search-value".to_string()),
+                        experiment_config: None,
+                        enterprise_value: None,
+                    }],
+                    search_term_param_name: Some("url".to_string()),
+                    ..Default::default()
+                }),
+            },
+            ..Default::default()
+        }
+    }
+
+    fn expected_minimal_engine(identifier: &str, name: &str) -> SearchEngineDefinitionV3 {
+        SearchEngineDefinitionV3 {
+            aliases: Vec::new(),
+            charset: "UTF-8".to_string(),
+            classification: SearchEngineClassification::General,
+            identifier: identifier.to_string(),
+            name: name.to_string(),
+            optional: false,
+            order_hint: None,
+            partner: None,
+            urls: SearchEngineUrls {
+                search: SearchEngineUrl {
+                    base: "https://example.com".to_string(),
+                    search_term_param_name: Some("search".to_string()),
+                    ..Default::default()
+                },
+                suggestions: None,
+                trending: None,
+                search_form: None,
+                visual_search: None,
+            },
+            is_new_until: None,
+        }
+    }
+}
+
+#[cfg(test)]
 use once_cell::sync::Lazy;
 
 #[cfg(test)]
-use std::collections::HashMap;
-
 pub static JSON_ENGINE_BASE: Lazy<JSONEngineBase> = Lazy::new(|| JSONEngineBase {
     aliases: Some(vec!["foo".to_string(), "bar".to_string()]),
     charset: Some("ISO-8859-15".to_string()),

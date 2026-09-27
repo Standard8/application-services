@@ -216,7 +216,7 @@ impl SearchEngineSelector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::{EngineRecord, ExpectedEngine, SubVariant, Variant};
+    use crate::test_helpers::{EngineRecord, EngineRecordV3, ExpectedEngine, ExpectedEngineV3, SubVariant, Variant};
     use crate::{test_helpers, types::*, SearchApiError};
     use mockito::mock;
     use remote_settings::{RemoteSettingsConfig, RemoteSettingsContext, RemoteSettingsServer};
@@ -470,8 +470,8 @@ mod tests {
         let config_result = Arc::clone(&selector).set_search_config_v3(
             json!({
               "data": [
-                EngineRecord::full("test1", "Test 1").build(),
-                EngineRecord::minimal("test2", "Test 2").build(),
+                EngineRecordV3::full("test1", "Test 1").build(),
+                EngineRecordV3::minimal("test2", "Test 2").build(),
                 {
                   "recordType": "defaultEngines",
                   "globalDefault": "test1",
@@ -496,8 +496,8 @@ mod tests {
             result.unwrap(),
             RefinedSearchConfigV3 {
                 engines: vec!(
-                    ExpectedEngine::full("test1", "Test 1").build().into(),
-                    ExpectedEngine::minimal("test2", "Test 2").build().into(),
+                    ExpectedEngineV3::full("test1", "Test 1").build(),
+                    ExpectedEngineV3::minimal("test2", "Test 2").build(),
                 ),
                 app_default_engine_id: Some("test1".to_string()),
                 app_private_default_engine_id: Some("test2".to_string())
@@ -1704,11 +1704,11 @@ mod tests {
 
         let selector = setup_remote_settings_test_v3(RECORDS_PRESENT);
 
-        let test_engine = ExpectedEngine::minimal("test", "Test").build();
+        let test_engine = ExpectedEngineV3::minimal("test", "Test").build();
         let private_default_fr_engine =
-            ExpectedEngine::minimal("private-default-FR", "Private default FR").build();
+            ExpectedEngineV3::minimal("private-default-FR", "Private default FR").build();
         let distro_default_engine =
-            ExpectedEngine::minimal("distro-default", "Distribution Default").build();
+            ExpectedEngineV3::minimal("distro-default", "Distribution Default").build();
 
         let result = Arc::clone(&selector).filter_engine_configuration_v3(SearchUserEnvironment {
             distribution_id: "test-distro".to_string(),
@@ -1723,9 +1723,9 @@ mod tests {
             result.unwrap(),
             RefinedSearchConfigV3 {
                 engines: vec![
-                    distro_default_engine.clone().into(),
-                    private_default_fr_engine.clone().into(),
-                    test_engine.clone().into(),
+                    distro_default_engine.clone(),
+                    private_default_fr_engine.clone(),
+                    test_engine.clone(),
                 ],
                 app_default_engine_id: Some("distro-default".to_string()),
                 app_private_default_engine_id: None
@@ -1747,9 +1747,9 @@ mod tests {
             result.unwrap(),
             RefinedSearchConfigV3 {
                 engines: vec![
-                    test_engine.into(),
-                    private_default_fr_engine.into(),
-                    distro_default_engine.into(),
+                    test_engine,
+                    private_default_fr_engine,
+                    distro_default_engine,
                 ],
                 app_default_engine_id: Some("test".to_string()),
                 app_private_default_engine_id: Some("private-default-FR".to_string())
@@ -1841,9 +1841,8 @@ mod tests {
         assert_eq!(
             result_de.unwrap(),
             RefinedSearchConfigV3 {
-                engines: vec![ExpectedEngine::minimal("engine-de", "German Engine")
-                    .build()
-                    .into()],
+                engines: vec![ExpectedEngineV3::minimal("engine-de", "German Engine")
+                    .build()],
                 app_default_engine_id: None,
                 app_private_default_engine_id: None,
             },
@@ -1858,7 +1857,7 @@ mod tests {
         assert_eq!(
             result_en.unwrap(),
             RefinedSearchConfigV3 {
-                engines: vec![ExpectedEngine::minimal("engine-en-us", "English US Engine").build().into(),],
+                engines: vec![ExpectedEngineV3::minimal("engine-en-us", "English US Engine").build(),],
                 app_default_engine_id: None,
                 app_private_default_engine_id: None,
             },
@@ -2053,9 +2052,8 @@ mod tests {
         assert_eq!(
             result_de.unwrap(),
             RefinedSearchConfigV3 {
-                engines: vec![ExpectedEngine::minimal("engine-de", "German Engine")
-                    .build()
-                    .into(),],
+                engines: vec![ExpectedEngineV3::minimal("engine-de", "German Engine")
+                    .build(),],
                 app_default_engine_id: None,
                 app_private_default_engine_id: None,
             },
@@ -2070,7 +2068,7 @@ mod tests {
         assert_eq!(
             result_en.unwrap(),
             RefinedSearchConfigV3 {
-                engines: vec![ExpectedEngine::minimal("engine-en-us", "English US Engine").build().into(),],
+                engines: vec![ExpectedEngineV3::minimal("engine-en-us", "English US Engine").build(),],
                 app_default_engine_id: None,
                 app_private_default_engine_id: None,
             },
